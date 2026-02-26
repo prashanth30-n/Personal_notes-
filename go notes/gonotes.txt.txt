@@ -1,0 +1,56 @@
+////////in go to perform the tasks concurrently we have the go routines for asynchronous operations these are different from threads which are handled by the os generally which are heavy but the go routines are handled by go routines which are light weight and a go routine get spawned by keyword go and all the go routines awake from the main go routine if the main go routine stopped then the other go routines go killed for example
+func sayHello() {
+    fmt.Println("Hello")
+}
+
+func main() {
+    go sayHello()
+    fmt.Println("Main done")
+}
+the output for the above code is Main done only as the main routine ends other go routines got killed and so at last if a main routine stops then other go routines will be killed and
+to avoid this we need to wait for other go routines to not get killed
+
+//channels
+go philosophy tells that communicate by passing data through channels like lets say we have a channel which is unbuffered no size example for this program is below
+func main() {
+    ch := make(chan int)
+
+    go func() {
+        ch <- 10
+    }()
+
+    x := <-ch
+    fmt.Println(x)
+}
+in this code the main go routine blocks until it receives a value from other go routine which sends the data//the blocking happens until some communication happens between them like they can communicate with data through channels or like they can send the signal close the to main and they internally works like sending the data through channels but no need of data just a close is enough this pattern you can see at server and graceful shutdown 
+this is how the unbuffered channels works
+///buffered channels there is a size for channels in this context
+func main() {
+    ch := make(chan int, 2)
+
+    go func() {
+        ch <- 1
+        ch <- 2
+    }()
+
+    x := <-ch
+    y := <-ch
+
+    fmt.Println(x, y)
+}
+in this the blocking happens for main go routine unitl there is some value from the receiver side Main receives one by one and sender blocks after the buffer size is full
+
+Buffered channel capacity affects SEND blocking, not RECEIVE blocking
+
+Receive cares only:
+
+empty → wait
+
+not empty → continue
+
+
+
+//////Deadlocks
+if lets say a have key1 and want key2 and b have a key2 and want key1 in this situation both waits until one gives this is known as deadlock it waits for infinite time this is known as deadlocks and to avoid deadlocks there must be a receiver for a sender and a sender for receiver if not then they are stuck in a deadlock
+
+ 

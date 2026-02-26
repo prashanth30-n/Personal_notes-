@@ -1,0 +1,5 @@
+the command **psql -U postgres** is used to connect the PostgreSQL server which is running locally at 5432 post in this command -U means user and  postgres is the username ,we can directly connect to our own database like mention in the command like psql -U postgres -d mydatabase where mydatabase is the database name now we can use pgadmin gui which registered with this postgres server now we can use pgadmin and check the databases or create new ones in the pgadmin and we can run the migrations from our backend code
+
+
+//now the other command ****netstat -an | find "5432"**
+ to check whether the postgres is running or not where nestat is called as networkstatistics
