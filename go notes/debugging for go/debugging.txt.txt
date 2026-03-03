@@ -1,0 +1,27 @@
+to debug the go code we need to have the delve to be installed and after installation go the main.go folder in your project from where you can debug your code using the dlv commands like dlv debug creates a new debugging session and it assigned with dlv client which will communicate with the dlv server and you can use some commands listed below to debug things clearly
+
+the commands are:
+List
+shows source code by file name and line number
+
+Exit
+
+if you are stuck in the debugging session you can exit
+
+breakpoints
+To list all current breakpoints for this debugging session
+
+clear
+To remove a specific breakpoint from the debugging session
+
+clearall
+To cleanup all manually added breakpoints
+
+continue
+Runs the program until the next breakpoint or until the program terminates
+
+step
+Step or as I like to call it “step in” is used to tell the debugger to go inside a function call, it’s like next, but used to go a level deeper when encoutering function calls.
+
+restart
+Restart will allows us to restart the program in case the program terminates and we still want to debug. This is especially useful if we don’t want to lose all our breakpoints and don’t want to exit and create a new delve debugging server from scratch
