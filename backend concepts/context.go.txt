@@ -1,0 +1,88 @@
+client makes many requests to our server, our backend calls DB, another microservice,does some processing,now if the user closes the browser halfway or request times out or server wants to cancel long running work without control our backend keeps doing unnecessary work which wastes cpu,DB conncections,so we need a way to cancel work set time  pass request scoped data now contexts helps in solving this things
+
+it is like a control signal+metadata carrier that flows through our program,it takes care of dealdines,metdata which is generally a request scoped data meaning userid, request id context helps in handling these things
+
+Client → Handler → Service → DB → External API
+Now:
+👉 If client cancels → ALL should stop
+
+That “stop signal” is carried by context.Context
+
+context values are request scoped and immutable and read only they are not editable as they are request scoped we generally set request scoped data such as userid,request id etc
+
+we have derived contexts like a tree if a parent context got cancelled children contexts gets cancelled automatically and now lets come to a question like why do we even need a child context for control among layers like if DB call should run for 2ms then we need a control among different layers so we use derived contexts
+
+now context is an interface internally the structure of context has 4 parts
+//Deadline function
+//Done function which return a empty data <-chan{} which closes the channel which is running in other thread
+//err it is used to tell what caused to stop like context stopped due to deadline exceeded or timeout passed
+//value for adding the request scoped data don't add business data large data to it
+
+now context behave like tree usually in main function we have with background function which should be used in main function to create a main context and in other services we have other our own context like context with timeout which are derived contexts and with their own specific timeouts and deadlines if the main parent context got closed then the other context automatically closes and because they got a signal from ctx.done which closes the context //this is how it works
+
+now lets our main function where the server execution starts 
+package main
+
+import (
+	"context"
+	"errors"
+	"net/http"
+	"os"
+	"os/signal"
+	"time"
+
+	"github.com/PatibandlaVenkat/Pubo/internal/config"
+	"github.com/PatibandlaVenkat/Pubo/internal/database"
+	"github.com/PatibandlaVenkat/Pubo/internal/handler"
+	"github.com/PatibandlaVenkat/Pubo/internal/logger"
+	"github.com/PatibandlaVenkat/Pubo/internal/repository"
+	"github.com/PatibandlaVenkat/Pubo/internal/router"
+	"github.com/PatibandlaVenkat/Pubo/internal/server"
+	"github.com/PatibandlaVenkat/Pubo/internal/service"
+)
+
+const DefaultContextTimeout = 30
+
+func main() {
+	cfg, err := config.LoadConfig()
+	if err!=nil{
+		panic("failed to load config: "+err.Error())
+	}
+	loggerService:=logger.NewLoggerServie(cfg.Observabiltiy)
+	defer loggerService.Shutdown()
+	log:=logger.NewLoggerWithService(cfg.Observabiltiy,loggerService)
+
+	if cfg.Primary.Env!="local"{
+		if err:=database.Migrate(context.Background(),&log,cfg); err!=nil{
+			log.Fatal().Err(err).Msg("failed to migrate database")
+		}
+	}
+	srv,err:=server.New(cfg,&log,loggerService)
+	if err!=nil{
+		
+		log.Fatal().Err(err).Msg("failed to intialise server")
+	}
+
+	repos:=repository.NewRepositories(srv)
+	services,serviceErr:=service.NewServices(srv,repos)
+	if serviceErr!=nil{
+		log.Fatal().Err(serviceErr).Msg("could not create services")
+	}
+	handlers:=handler.NewHandlers(srv,services)
+	r:=router.NewRouter(srv,handlers,services)
+	srv.SetupHttpServer(r)
+	ctx,stop:=signal.NotifyContext(context.Background(),os.Interrupt)
+	go func(){
+		if err=srv.Start(); err!=nil && !errors.Is(err,http.ErrServerClosed){
+log.Fatal().Err(err).Msg("failed to start server")
+		}
+	}()
+	<-ctx.Done()
+	ctx,cancel:=context.WithTimeout(context.Background(),DefaultContextTimeout*time.Second)
+	 if err=srv.Shutdown(ctx); err!=nil{
+		log.Fatal().Err(err).Msg("server forced to shutdown")
+	 }
+	 stop()
+	 cancel()
+	 log.Info().Msg("server exited properly")
+in this the server start function is a blocking function we need to run any blocking function in go routines now the main go routines still continues execution concurrently with other go routine now when we click ctlr c the terminal the signal notifies the done function which returns a empty data and closes the channel now it should not stop immediately which is bad design so we have graceful shutdown ,so we are using with timeout to wait create a child context now after timeout server is closed gracefully rather than abruptly which is a good design in this case this and one practice is to call the cancel function even though withtimeout calls the cancel automatically after timeout but it may leak,memory waste so we need to call the cancel function which is necessary and it is a good practice ,whenenver we have blocking function run them in another go routine ,this is how we use go routines 

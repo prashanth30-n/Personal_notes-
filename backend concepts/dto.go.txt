@@ -1,0 +1,61 @@
+data transfer object is a separate object whose only job is to carry data between systems like between the backend to backend or frontend to backend for better communication , lets address why we even need this dtos
+lets say a client like a frontend asks give me user data if we use this type 
+{
+  "id": 1,
+  "name": "Prashanth",
+  "email": "p@example.com",
+  "password": "hashed_password_123",
+  "created_at": "2026-03-29"
+}
+if we give this response then user secrets get exposed and unwanted payload is being sent to client and we expose our database schema so to avoid this we have the dtos data transfer objects which will be used for communication among systems
+we will send this // DTO
+{
+  "name": "Prashanth",
+  "email": "p@example.com"
+} here the details which are allowed are passed rather than passing entire information in which how the database stores so, dtos are for sending the data with less payloads
+
+
+validation in dtos,
+one principle we always follow is validate anything comes to server from out no matter what it is first principle when designing the backends so we have dtos help in validations
+client data is always messy and DTOS helps us validate
+DTO can enforce:
+
+Required fields
+Correct format
+Data types
+
+now DTO are used when receiving the input and sending the output in entire request and response life cycle
+
+now Input DTO are used for validation and structuring the input , and we perform our business logic on them like comparing the password ,checking the user in DB etc and we send a output DTO to the client,this is how the DTOs are used 
+
+now example DTO
+type CreateCategoryPayload struct {
+	Name        string  `json:"name" validate:"required,min=1,max=100"`
+	Color       string  `json:"color" validate:"required,hexcolor"`
+	Description *string `json:"description" validate:"omitempty,max=255"`
+}
+now the pointer type for string is present because it is optional and it is set to pointer for if client doesn't sent any description then it will be set to nil rather than empty string "" so,it will be set to nil and omitempty ignores the attributes which are set to nil,use the *pointer types if the attribute is optional
+we validate by using the validator package
+func (p *CreateCategoryPayload) Validate() error {
+	validate := validator.New()
+	return validate.Struct(p)
+}
+this validates the fields which are mentioned in our defined DTO structs this the pattern we use the json attribtes will be mapped when we use the function like this //json.NewDecoder(r.Body).Decode(&payload)//
+example in this case our clients "name" attribute will be mapped to Name filed in our DTO we need to have this mappings ,
+
+
+now we have in a http request An HTTP request has multiple sources of data:
+
+PUT /categories/123?active=true
+
+It contains:
+
+Source	Example
+Path params	/categories/123 → id=123
+Query params	?active=true
+Body (JSON)	{ "name": "Food" }
+so data comes from multiple places so we are using the DTO which is a single object so, we have similar tags to json like "param","query" these tags are similar and they are used for accessing the data from path paramteres and query parameters
+type UpdateCategoryPayload struct {
+	ID          uuid.UUID `param:"id" validate:"required,uuid"`//path parameter is used here which says the framework to look for the path parameter in the url and extract the data,similarly to query paramteres
+	Name        *string   `json:"name" validate:"omitempty,min=1,max=100"
+}

@@ -1,0 +1,58 @@
+we have layers like router, handler/controller,service,repostiory layer in each layer router routes the request,controller or handler layer which perform http operations ,validations,transfromations,these are done in this layer and then passed to service layer in this layer the business logic is performed specific to organizations and the repository layer is to perform the database operations each now request passes through these layers and the response is made back from repository layer to service layer then to control layer and to handler at which the status code are responded back to client,in this layer middlewares are placed wherever wants but mostly before the handler layer they are placed to perform cors validations,authentications etc
+
+now repository layer performs the database operations right now the pattern you should see in designing the repository layer is this
+
+observe the pattern in this code 
+type CategoryRepository struct {
+	server *server.Server
+}
+
+func NewCategoryRepository(server *server.Server) *CategoryRepository {
+	return &CategoryRepository{server: server}
+}
+
+func (r *CategoryRepository) CreateCategory(ctx context.Context, userID string,
+	payload *category.CreateCategoryPayload,
+) (*category.Category, error) {
+	stmt := `
+		INSERT INTO
+			todo_categories (
+				user_id,
+				name,
+				color,
+				description
+			)
+		VALUES
+			(
+				@user_id,
+				@name,
+				@color,
+				@description
+			)
+		RETURNING
+		*
+	`
+
+	rows, err := r.server.DB.Pool.Query(ctx, stmt, pgx.NamedArgs{
+		"user_id":     userID,
+		"name":        payload.Name,
+		"color":       payload.Color,
+		"description": payload.Description,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute create category query for user_id=%s name=%s: %w", userID, payload.Name, err)
+	}
+
+	categoryItem, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[category.Category])
+	if err != nil {
+		return nil, fmt.Errorf("failed to collect row from table:todo_categories for user_id=%s name=%s: %w", userID, payload.Name, err)
+	}
+
+	return &categoryItem, nil
+}
+now we are creating a struct for every repository and then we pass the server which will have info about the config,logger,redis,database etc and they can be used in other layers this is known as dependency injection pattern now everywhere we use the dependency injection pattern,
+now the repository struct will have methods here above mentioned like NewCategoryRepository which the server instance is passed which have database which later will be used for database operations,and the DTO which is created will be passed to Repositories,and other paramters like USerid,which are not present in DTO should also include because they are used to execute the database operations via pgx but they will be passed by upper layers like handler layer will pass them to service layer and to repo layer this is how they receive the other paramters which are not present in the DTOs we declare ,now Repos will return the struct which are created in model/categories folder ,which will be passed to upper layers this is how the repo layer is used and no logging is performed in this layers 
+
+
+categoryItem, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[category.Category])
+now in this line the  pgx.RowToStructByName[category.Category] what it does is the db row will be taken and converted automatically to struct we created in the model/category other than DTO which will be the response struct this is how the function maps to struct we defined category model which is Response DTO other than the request DTO
