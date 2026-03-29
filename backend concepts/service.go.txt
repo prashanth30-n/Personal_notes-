@@ -1,0 +1,40 @@
+service layer is used to do business logic of organization specific logic and then passed to repo layer to perform the database opeations and we do event logging in this layer
+and the response received from the repo layer passed to this layer and error handling is handled properly and these response passed to handler layer
+type CategoryService struct {
+	server       *server.Server
+	categoryRepo *repository.CategoryRepository
+}
+
+func NewCategoryService(server *server.Server, categoryRepo *repository.CategoryRepository) *CategoryService {
+	return &CategoryService{
+		server:       server,
+		categoryRepo: categoryRepo,
+	}
+}
+
+func (s *CategoryService) CreateCategory(ctx echo.Context, userID string,
+	payload *category.CreateCategoryPayload,
+) (*category.Category, error) {
+	logger := middleware.GetLogger(ctx)
+
+	categoryItem, err := s.categoryRepo.CreateCategory(ctx.Request().Context(), userID, payload)
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to create category")
+		return nil, err
+	}
+
+	// Business event log
+	eventLogger := middleware.GetLogger(ctx)
+	eventLogger.Info().
+		Str("event", "category_created").
+		Str("category_id", categoryItem.ID.String()).
+		Str("name", categoryItem.Name).
+		Str("color", categoryItem.Color).
+		Msg("Category created successfully")
+
+	return categoryItem, nil
+}
+now the pattern to observe clearly for every service is we register every service the server struct(dependency injection),and we also include the repo layer registered in this,now we perform the business logic here and send to repo layer,the logging is performed here in this layer 
+
+
+in this layer there is more meaningful so the logging is performed in this layer as it contains the business logic
