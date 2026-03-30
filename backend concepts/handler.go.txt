@@ -1,0 +1,30 @@
+The handler layers are basic entrypoints for client requests they receive the http requests and extract the data from body,params,query (Binding ) in echo.context we have and Bind function which binds to the type passed to it 
+extracts the path params, query params and body ,if the Binding fails It is bad request,if binding is successful then we validate them like our business logic age should be >18 ,this validations are done and using the validations package and if you observe the DTOs every DTO has a method for validation,now the best practice is what ever data comes out side of the server or backend the validation should be definitely performed this is a good practice for security reasons and needed most ,IN handlers the binding ,validations are performed at first,
+these handler layers calls the service layers and finally the HTTP response is generated at this layer,this is how the handlers works
+
+
+type CategoryHandler struct {
+	Handler//this handler consists the server struct dependency injection pattern
+	categoryService *service.CategoryService //service should be registered in this layer
+}
+
+func NewCategoryHandler(s *server.Server, categoryService *service.CategoryService) *CategoryHandler {
+	return &CategoryHandler{
+		Handler:         NewHandler(s),
+		categoryService: categoryService,
+	}
+}//contructor for handler
+
+func (h *CategoryHandler) CreateCategory(c echo.Context) error {
+	return Handle(
+		h.Handler,
+		func(c echo.Context, payload *category.CreateCategoryPayload) (*category.Category, error) {
+			userID := middleware.GetUserID(c)
+			return h.categoryService.CreateCategory(c, userID, payload)
+		},
+		http.StatusCreated,
+		&category.CreateCategoryPayload{},
+	)(c)
+}
+//refer the base.go in handlers folder in go boilerplate for more clariety about the Handle(c)
+
