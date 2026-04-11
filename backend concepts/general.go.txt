@@ -1,0 +1,2 @@
+struct tags not only used for binding the data (Unmarshalling means the data mapped to your go struct based on the struct tags) these are not limited to this but also when sending the response 
+for marshalling the data (converting a json response from your go struct) and sending to client/frontend in these scenarios also they are used for sending the proper response to the clients
