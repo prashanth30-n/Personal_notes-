@@ -85,5 +85,19 @@ log.Fatal().Err(err).Msg("failed to start server")
 	 stop()
 	 cancel()
 	 log.Info().Msg("server exited properly")
-here the main go routine is the first routine and we are creating a child go routine and when we click ctrl c the main go routine stops ,if parent stops the child stops executing so ,the child go routine stops executing and we handle graceful shutdown below
+CTRL+C
+   ↓
+Done channel closes
+   ↓
+Main goroutine wakes
+   ↓
+Shutdown initiated
+   ↓
+Server stops new connections
+   ↓
+Existing goroutines finish
+   ↓
+Timeout reached?
+   ├── No → graceful exit
+   └── Yes → force close
 in this the server start function is a blocking function we need to run any blocking function in go routines now the main go routines still continues execution concurrently with other go routine now when we click ctlr c the terminal the signal notifies the done function which returns a empty data and closes the channel now it should not stop immediately which is bad design so we have graceful shutdown ,so we are using with timeout to wait create a child context now after timeout server is closed gracefully rather than abruptly which is a good design in this case this and one practice is to call the cancel function even though withtimeout calls the cancel automatically after timeout but it may leak,memory waste so we need to call the cancel function which is necessary and it is a good practice ,whenenver we have blocking function run them in another go routine ,this is how we use go routines 
